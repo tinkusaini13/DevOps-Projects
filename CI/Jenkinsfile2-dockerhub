@@ -1,0 +1,103 @@
+pipeline {
+    agent any
+    // tools{
+    //     maven 'dinesh-maven'
+    // }
+
+    environment {
+                // AWS_ACCESS_KEY_ID = credentials('jenkins-aws-access-key-id')
+                // AWS_SECRET_ACCESS_KEY = credentials('jenkins-aws-secret-access-key')
+                SONAR_TOKEN = credentials('sonar-creds')
+                DOCKERHUB_USERNAME = "shivanishivani"
+                APP_NAME = "clinic09"
+                IMAGE_TAG = "${BUILD_NUMBER}"
+                IMAGE_NAME = "${DOCKERHUB_USERNAME}" + "/" + "${APP_NAME}"
+                //REGISTRY_CREDS = 'docker-creds'
+            }
+
+    stages {
+
+        stage ('Sonarcloud scan') {
+            steps {  
+                echo 'scanning code' 
+                script {
+                    dir ('application-code-g') {
+                    env.SONAR_TOKEN = "${SONAR_TOKEN}"
+                    sh 'mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=august_project_job_ci'
+                    }
+                }
+            }  
+        }
+        stage ('Build jar') {
+            steps {  
+                echo 'Building jar' 
+                script {
+                    dir ('application-code-g') {
+                        sh 'mvn clean install -DskipTests,spring.profiles.active=mysql'
+                    }
+                }
+            }  
+        }
+        stage ('Build docker image') {
+            steps {  
+                echo 'Building docker image' 
+                script {
+                    dir ('application-code-g') {
+                        docker_image = docker.build "${IMAGE_NAME}"
+                    }
+                }
+            }  
+        }
+        stage ('Push docker image') {
+            steps {  
+                echo 'pushing docker image' 
+                script {
+                    dir ('application-code-g') {
+                        docker_image.push("${BUILD_NUMBER}")
+                    }
+                }
+            }  
+        }
+        stage ('Push to dockerhub') {
+            steps {
+                script {
+                    echo 'Pushing to dockerhub'
+                    withCredentials([usernamePassword(credentialsId: 'docker-creds', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+                            sh "echo $PASS | docker login -u $USER --password-stdin"
+                            docker_image.push("${BUILD_NUMBER}")
+                      }
+                }
+            }  
+        }
+        
+        stage ('Clean docker images') {
+            steps {  
+                echo 'Cleaning the docker images' 
+                script {
+                        dir ('application-code-g') {
+                        sh "docker rmi ${IMAGE_NAME}:${BUILD_NUMBER}"
+                        sh "docker rmi ${IMAGE_NAME}:latest"
+                    }
+                }
+            } 
+        }
+
+        // stage ('Trigger cd pipeline') {
+        //     steps {  
+        //         echo 'Triggering cd pipeline' 
+        //         script {
+        //                 sh """
+        //                     curl http://3.145.55.63:8080/job/cd_pipeline/buildWithParameters?token=gitops-config \
+        //                         --user dinesh-jenkins:11fa5281306d1bb5e35843a72e9c97fbd2 \
+        //                         --data IMAGE_TAG=${IMAGE_TAG} --data verbosity=high \
+        //                         -H content-type:application/x-www-form-urlencoded \
+        //                         -H cache-control:no-cache
+        //                     """
+        //             }
+        //         }
+        // } 
+   
+   
+    } 
+}
+
