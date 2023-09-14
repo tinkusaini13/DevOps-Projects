@@ -7,9 +7,9 @@ pipeline {
     environment {
                 // AWS_ACCESS_KEY_ID = credentials('jenkins-aws-access-key-id')
                 // AWS_SECRET_ACCESS_KEY = credentials('jenkins-aws-secret-access-key')
-                SONAR_TOKEN = credentials('sonar-creds')
-                DOCKERHUB_USERNAME = "shivanishivani"
-                APP_NAME = "clinic09"
+                SONAR_TOKEN = credentials('sonar')
+                DOCKERHUB_USERNAME = "sainiji"
+                APP_NAME = "demo1"
                 IMAGE_TAG = "${BUILD_NUMBER}"
                 IMAGE_NAME = "${DOCKERHUB_USERNAME}" + "/" + "${APP_NAME}"
                 //REGISTRY_CREDS = 'docker-creds'
@@ -21,7 +21,7 @@ pipeline {
             steps {  
                 echo 'scanning code' 
                 script {
-                    dir ('application-code-g') {
+                    dir ('CI/application-code-g') {
                     env.SONAR_TOKEN = "${SONAR_TOKEN}"
                     sh 'mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=august_project_job_ci'
                     }
@@ -52,7 +52,7 @@ pipeline {
             steps {  
                 echo 'pushing docker image' 
                 script {
-                    dir ('application-code-g') {
+                    dir ('CI/application-code-g') {
                         docker_image.push("${BUILD_NUMBER}")
                     }
                 }
@@ -62,7 +62,7 @@ pipeline {
             steps {
                 script {
                     echo 'Pushing to dockerhub'
-                    withCredentials([usernamePassword(credentialsId: 'docker-creds', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+                    withCredentials([usernamePassword(credentialsId: 'docker-pass', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
                             sh "echo $PASS | docker login -u $USER --password-stdin"
                             docker_image.push("${BUILD_NUMBER}")
                       }
