@@ -53,10 +53,8 @@ You can use the database credentials specified in your .env file to configure Wo
 
 Access the phpMyAdmin interface at http://localhost:8081 using your web browser.
 
- image1
-
- image2
-
+![](p1.JPG)
+![](w1.JPG)
 
  
 2.	You now have a local WordPress development environment up and running.
